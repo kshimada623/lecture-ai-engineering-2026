@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^uv run pytest tests/test_ask\\.py -q$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
