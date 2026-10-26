@@ -36,3 +36,5 @@ def test_ask_prints_input_and_output_tokens(monkeypatch, capsys):
     assert "45" in captured
     assert "応答時間" in captured
     assert "1.23" in captured or "1.234" in captured
+    assert "生成速度" in captured
+    assert "0.027" in captured

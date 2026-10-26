@@ -41,6 +41,10 @@ def ask(question: str) -> str:
         print(f"[usage] 入力トークン数: {input_tokens if input_tokens is not None else 'N/A'}")
         print(f"[usage] 出力トークン数: {output_tokens if output_tokens is not None else 'N/A'}")
 
+    if output_tokens not in (None, 0):
+        generation_speed = elapsed / output_tokens
+        print(f"[usage] 生成速度: {generation_speed:.4f} 秒/トークン")
+
     return response.text
 
 
