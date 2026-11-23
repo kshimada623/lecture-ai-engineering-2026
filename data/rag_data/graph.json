@@ -14141,6 +14141,11 @@
       "source": "term:tool-namespace",
       "target": "term:tool-description",
       "relation": "related_term"
+    },
+    {
+      "source": "term:rag",
+      "target": "term:ai-agent",
+      "relation": "related_term"
     }
   ]
 }

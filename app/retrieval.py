@@ -147,7 +147,7 @@ def search_graph(query: str) -> dict:
     adjacent = defaultdict(set)
     for edge in graph["edges"]:
         a, b = edge["source"], edge["target"]
-        if edge["relation"] in ("next_page", "mentions") and a in nodes and b in nodes:
+        if edge["relation"] in ("next_page", "mentions", "related_term") and a in nodes and b in nodes:
             adjacent[a].add(b)
             adjacent[b].add(a)
 
@@ -174,15 +174,93 @@ def search_graph(query: str) -> dict:
                 queue.append((neighbor, route))
                 if neighbor not in pages or neighbor in seed_ids:
                     continue
-                frequency = max((len(adjacent[n]) for n in route if nodes[n]["kind"] == "term"), default=0)
-                priority = (len(route) - 1, frequency, rank, neighbor)
+                # frequency = max((len(adjacent[n]) for n in route if nodes[n]["kind"] == "term"), default=0)
+                # priority = (len(route) - 1, frequency, rank, neighbor)
+                ###
+                frequency = max(
+                    (len(adjacent[n]) for n in route if nodes[n]["kind"] == "term"),
+                    default=0
+                )
+
+                # related_termを通った経路か判定
+                uses_related_term = any(
+                    nodes[a]["kind"] == "term" and nodes[b]["kind"] == "term"
+                    for a, b in zip(route, route[1:])
+                )
+
+                # related_termを経由したページを優先
+                # priority = (
+                #     0 if uses_related_term else 1,
+                #     len(route) - 1,
+                #     frequency,
+                #     rank,
+                #     neighbor
+                # )
+
+
+                # 質問に含まれる語とページ内容の一致を評価
+                keywords = ["RAG", "エージェント", "ツール"]
+
+                page_text = (
+                    pages[neighbor]["title"] + " "
+                    + pages[neighbor]["section"] + " "
+                    + pages[neighbor]["content"]
+                ).lower()
+
+                relevance = sum(
+                    1 for word in keywords
+                    if word.lower() in page_text
+                )
+
+                # related_term経由の候補を優先しつつ、
+                # 質問との関連性が高いページを上位にする
+                priority = (
+                    0 if uses_related_term else 1,
+                    -relevance,
+                    len(route) - 1,
+                    frequency,
+                    rank,
+                    neighbor
+                )
+
+                ###
                 candidate = {**pages[neighbor], "hops": len(route) - 1,
                              "path": [{"id": n, "title": nodes[n]["title"]} for n in route]}
                 if neighbor not in candidates or priority < candidates[neighbor][0]:
                     candidates[neighbor] = (priority, candidate)
-    expanded = [candidate for _, candidate in sorted(candidates.values())]
-    return {"seeds": results, "expanded": expanded[:max(0, GRAPH_MAX_RESULTS - len(results))],
-            "max_hops": GRAPH_HOPS}
+    # expanded = [candidate for _, candidate in sorted(candidates.values())]
+    # return {"seeds": results, "expanded": expanded[:max(0, GRAPH_MAX_RESULTS - len(results))],
+    #         "max_hops": GRAPH_HOPS}
+    ###
+    # related_termを通った候補と通常の候補を分ける
+    related_candidates = []
+    normal_candidates = []
+
+    for priority, candidate in sorted(candidates.values()):
+        if priority[0] == 0:
+            related_candidates.append(candidate)
+        else:
+            normal_candidates.append(candidate)
+
+    # 取得可能なページ数
+    max_expanded = max(0, GRAPH_MAX_RESULTS - len(results))
+
+    # related_term経由のページは最大3件
+    related_limit = min(3, max_expanded)
+
+    # 通常の候補を優先し、related_term経由の候補も確保
+    expanded = (
+        normal_candidates[:max_expanded - related_limit]
+        + related_candidates[:related_limit]
+    )
+
+    return {
+        "seeds": results,
+        "expanded": expanded,
+        "max_hops": GRAPH_HOPS
+    }
+    ###
+
 
 
 
